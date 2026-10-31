@@ -10,8 +10,9 @@ struct ExternalDisplay: Identifiable, Equatable {
     let nativeWidth: Int
     let nativeHeight: Int
 
-    /// 4K and larger panels already get HiDPI modes from macOS.
-    var isEligible: Bool { nativeWidth < 3840 }
+    /// Panels 2160 pixels tall and up (4K, 5K) already get HiDPI modes from macOS.
+    /// Judging by height keeps wide low-density panels such as 3440 × 1440 and 5120 × 1440.
+    var isEligible: Bool { nativeHeight < 2160 }
 }
 
 enum Displays {
@@ -52,7 +53,7 @@ enum Displays {
         }
         var best: [Int: CGDisplayMode] = [:]
         for mode in candidates {
-            if let current = best[mode.width], current.refreshRate >= mode.refreshRate { continue }
+            if let current = best[mode.width], !isBetter(mode, than: current, on: display.id) { continue }
             best[mode.width] = mode
         }
         return best.values.sorted { $0.width > $1.width }
@@ -62,8 +63,32 @@ enum Displays {
     static func nativeMode(of display: ExternalDisplay) -> CGDisplayMode? {
         modes(of: display.id)
             .filter { $0.width == display.nativeWidth && $0.pixelWidth == display.nativeWidth }
-            .max { $0.refreshRate < $1.refreshRate }
+            .reduce(nil) { best, mode in
+                guard let best else { return mode }
+                return isBetter(mode, than: best, on: display.id) ? mode : best
+            }
     }
+
+    /// Higher refresh rate wins; at the same rate the variable refresh (Adaptive Sync) variant wins,
+    /// so switching modes keeps VRR on instead of falling back to a fixed rate.
+    private static func isBetter(_ mode: CGDisplayMode, than other: CGDisplayMode, on id: CGDirectDisplayID) -> Bool {
+        if mode.refreshRate != other.refreshRate { return mode.refreshRate > other.refreshRate }
+        return isVariableRefresh(mode, on: id) && !isVariableRefresh(other, on: id)
+    }
+
+    /// macOS lists every refresh rate twice, as a fixed and a variable variant that look identical
+    /// through the public API. A private SkyLight call tells them apart; without it, every mode counts as fixed.
+    static func isVariableRefresh(_ mode: CGDisplayMode, on id: CGDirectDisplayID) -> Bool {
+        guard let isModeVRR else { return false }
+        return isModeVRR(id, mode.ioDisplayModeID)
+    }
+
+    private static let isModeVRR: (@convention(c) (CGDirectDisplayID, Int32) -> Bool)? = {
+        guard let skyLight = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/SkyLight", RTLD_LAZY),
+              let symbol = dlsym(skyLight, "SLSIsDisplayModeVRR")
+        else { return nil }
+        return unsafeBitCast(symbol, to: (@convention(c) (CGDirectDisplayID, Int32) -> Bool).self)
+    }()
 
     @discardableResult
     static func apply(_ mode: CGDisplayMode, to id: CGDirectDisplayID) -> Bool {

@@ -37,12 +37,27 @@ final class Model: ObservableObject {
     @Published var selectedID: CGDirectDisplayID?
     @Published var busy = false
     @Published var message: String?
+    /// The "looks like" width Turn On switches to. Nil means the largest.
+    @Published var preferredWidth: Int?
 
     var selected: ExternalDisplay? { displays.first { $0.id == selectedID } ?? displays.first }
 
     var status: Status {
         guard let display = selected, let mode = Displays.currentMode(of: display.id) else { return .off }
         return mode.pixelWidth == mode.width * 2 && mode.width * 2 > display.nativeWidth ? .on : .off
+    }
+
+    /// Sizes to choose from: the installed HiDPI modes, or the ones Turn On will install.
+    var sizes: [(width: Int, height: Int)] {
+        guard let display = selected else { return [] }
+        let installed = Displays.hiDPIModes(of: display).map { (width: $0.width, height: $0.height) }
+        return installed.isEmpty ? Override.sizes(for: display) : installed
+    }
+
+    var selectedWidth: Int? {
+        guard let display = selected else { return nil }
+        if status == .on, let mode = Displays.currentMode(of: display.id) { return mode.width }
+        return preferredWidth ?? sizes.first?.width
     }
 
     var currentSize: String? {
@@ -65,6 +80,16 @@ final class Model: ObservableObject {
             selectedID = displays.first?.id
         }
         objectWillChange.send()
+    }
+
+    /// Picks a size. While sharp text is on it switches right away; no password is needed for that.
+    func choose(width: Int) {
+        preferredWidth = width
+        guard status == .on, let display = selected,
+              let mode = Displays.hiDPIModes(of: display).first(where: { $0.width == width })
+        else { return }
+        Displays.apply(mode, to: display.id)
+        refresh()
     }
 
     func toggle() {
@@ -92,7 +117,8 @@ final class Model: ObservableObject {
             _ = await Task.detached { Displays.reconnect(id) }.value
         }
         // The display ID survives a reconnect, so look the modes up again on the same display.
-        guard let mode = Displays.hiDPIModes(of: display).first else {
+        let modes = Displays.hiDPIModes(of: display)
+        guard let mode = modes.first(where: { $0.width == preferredWidth }) ?? modes.first else {
             message = "Almost there. Unplug the monitor cable and plug it back in, then press Turn On again."
             return
         }
@@ -131,7 +157,7 @@ struct ContentView: View {
         .padding(.horizontal, 32)
         .padding(.top, 36)
         .padding(.bottom, 24)
-        .frame(width: 340, height: 420)
+        .frame(width: 340, height: 450)
         .background(.background)
     }
 
@@ -168,6 +194,34 @@ struct ContentView: View {
                     .foregroundStyle(.secondary)
             }
             .font(.callout)
+
+            if model.sizes.count > 1 {
+                sizePicker
+            }
+        }
+    }
+
+    private var sizePicker: some View {
+        let sizes = model.sizes
+        return Picker("Size", selection: Binding(
+            get: { model.selectedWidth ?? 0 },
+            set: { model.choose(width: $0) }
+        )) {
+            ForEach(Array(sizes.enumerated()), id: \.element.width) { index, size in
+                Text(sizeLabel(size, index: index, count: sizes.count)).tag(size.width)
+            }
+        }
+        .labelsHidden()
+        .fixedSize()
+        .disabled(model.busy)
+    }
+
+    private func sizeLabel(_ size: (width: Int, height: Int), index: Int, count: Int) -> String {
+        let label = "\(size.width) × \(size.height)"
+        switch index {
+        case 0: return "\(label) — More Space"
+        case count - 1: return "\(label) — Larger Text"
+        default: return label
         }
     }
 
