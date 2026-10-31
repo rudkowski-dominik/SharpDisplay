@@ -255,6 +255,8 @@ struct ContentView: View {
                 NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Displays-Settings.extension")!)
             }
             .buttonStyle(.link)
+            Text("© 2026 Dominik Rudkowski")
+                .foregroundStyle(.tertiary)
         }
         .font(.footnote)
         .multilineTextAlignment(.center)

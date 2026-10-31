@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.1 — 2026-10-31
+- Shows the copyright in the window and in the About panel.
+- Shows "External Display" instead of a blank name for virtual displays, such as the one macOS creates for remote sessions.
+
 ## 1.1 — 2026-10-31
 ### Fixed
 - **VRR (Adaptive Sync) stays on after switching.** macOS lists every refresh rate twice, as a fixed and a variable variant that look identical through the public API. SharpDisplay now asks the window server which one is variable and always uses it. In 1.0 it could land on the fixed variant, so you had to pick *Variable* again in System Settings.

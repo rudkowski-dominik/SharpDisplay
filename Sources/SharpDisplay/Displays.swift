@@ -140,6 +140,8 @@ enum Displays {
     private static func name(of id: CGDirectDisplayID) -> String {
         let key = NSDeviceDescriptionKey("NSScreenNumber")
         let screen = NSScreen.screens.first { ($0.deviceDescription[key] as? NSNumber)?.uint32Value == id }
-        return screen?.localizedName ?? "External Display"
+        // Virtual displays, such as the one macOS creates for remote sessions, have an empty name.
+        guard let name = screen?.localizedName, !name.isEmpty else { return "External Display" }
+        return name
     }
 }
