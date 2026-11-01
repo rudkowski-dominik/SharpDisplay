@@ -2,6 +2,8 @@
 
 **Sharp, Retina-style text on 1440p, 1080p and ultrawide monitors connected to a Mac. One button.**
 
+![SharpDisplay in light and dark mode](docs/hero.png)
+
 macOS only renders text at 2x (HiDPI) on displays it considers Retina — 4K and up. On a 27" 1440p monitor
 text is drawn at 1x and looks soft, because macOS no longer uses subpixel antialiasing.
 SharpDisplay adds real HiDPI modes for your monitor, so macOS renders everything at twice the resolution
@@ -10,6 +12,9 @@ and scales it down to the panel.
 | Before | After |
 |---|---|
 | 2560 × 1440, rendered at 1x | Looks like 2496 × 1404, rendered at 4992 × 2808 |
+
+![The same text rendered at 1x and at 2x, magnified](docs/before-after.png)
+<sub>Illustration: the same text rendered at 1x and at 2x, magnified 8 times.</sub>
 
 - **One button.** Turn On adds the modes and switches to the sharpest one. Turn Off puts everything back.
 - **Pick your size.** Choose between more space and larger text right in the app; switching sizes needs no password.
