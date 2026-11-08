@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2
+
+- App icon.
+
 ## 1.1.1 — 2026-10-31
 - Shows the copyright in the window and in the About panel.
 - Shows "External Display" instead of a blank name for virtual displays, such as the one macOS creates for remote sessions.
