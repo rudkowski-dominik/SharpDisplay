@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.3 — 2026-11-08
+- Works with monitors turned to portrait. The sharper modes now match the panel's own orientation, so an upright 1920 × 1080 screen gets 1053 × 1872 and the other sizes.
+- Ignores the few small HiDPI modes macOS adds by itself, some in a different aspect ratio (600 × 800 on an upright 1080p screen). They are no longer offered as sizes, and Turn On no longer picks one by mistake.
+
 ## 1.1.2 — 2026-11-08
 - App icon.
 
