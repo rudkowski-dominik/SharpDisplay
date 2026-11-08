@@ -17,6 +17,7 @@ lipo -create -output "$APP/Contents/MacOS/SharpDisplay" build/SharpDisplay-arm64
 rm build/SharpDisplay-arm64 build/SharpDisplay-x86_64
 
 cp Resources/Info.plist "$APP/Contents/Info.plist"
+cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 codesign --force --sign - "$APP"
 
 ditto -c -k --keepParent "$APP" build/SharpDisplay.zip
