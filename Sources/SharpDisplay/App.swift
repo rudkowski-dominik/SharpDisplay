@@ -51,7 +51,7 @@ final class Model: ObservableObject {
     var sizes: [(width: Int, height: Int)] {
         guard let display = selected else { return [] }
         let installed = Displays.hiDPIModes(of: display).map { (width: $0.width, height: $0.height) }
-        return installed.isEmpty ? Override.sizes(for: display) : installed
+        return Override.isInstalled(for: display) && !installed.isEmpty ? installed : Override.sizes(for: display).map(display.oriented)
     }
 
     var selectedWidth: Int? {
@@ -112,7 +112,9 @@ final class Model: ObservableObject {
         if !Override.isInstalled(for: display) {
             try Override.install(for: display)
         }
-        if Displays.hiDPIModes(of: display).isEmpty {
+        // Reconnect until macOS has read the override; HiDPI modes it offers on its own don't count.
+        let expected = Override.sizes(for: display).map(display.oriented).map(\.width)
+        if !Displays.hiDPIModes(of: display).contains(where: { expected.contains($0.width) }) {
             let id = display.id
             _ = await Task.detached { Displays.reconnect(id) }.value
         }

@@ -13,8 +13,9 @@ enum Override {
 
     /// "Looks like" sizes in the panel's aspect ratio, from 97.5% down to 62.5% of the native width.
     /// macOS ignores a HiDPI mode equal to the native size, so 100% is never offered.
+    /// Sizes are in panel orientation, as the override needs them, even when the screen is rotated.
     static func sizes(for display: ExternalDisplay) -> [(width: Int, height: Int)] {
-        let w = display.nativeWidth, h = display.nativeHeight
+        let w = display.panelWidth, h = display.panelHeight
         let divisor = gcd(w, h)
         let stepW = w / divisor, stepH = h / divisor
         var result: [(Int, Int)] = []

@@ -7,12 +7,24 @@ struct ExternalDisplay: Identifiable, Equatable {
     let name: String
     let vendorID: UInt32
     let productID: UInt32
+    /// Native size as the screen is turned now, which is how display modes report it.
     let nativeWidth: Int
     let nativeHeight: Int
+    /// Turned 90° or 270° in Displays settings, for example a monitor standing upright.
+    let isRotated: Bool
+
+    /// Native size of the panel as it was built, before rotation. Display overrides use this orientation.
+    var panelWidth: Int { isRotated ? nativeHeight : nativeWidth }
+    var panelHeight: Int { isRotated ? nativeWidth : nativeHeight }
 
     /// Panels 2160 pixels tall and up (4K, 5K) already get HiDPI modes from macOS.
     /// Judging by height keeps wide low-density panels such as 3440 × 1440 and 5120 × 1440.
-    var isEligible: Bool { nativeHeight < 2160 }
+    var isEligible: Bool { panelHeight < 2160 }
+
+    /// A size in panel orientation, turned the way the screen is turned now.
+    func oriented(_ size: (width: Int, height: Int)) -> (width: Int, height: Int) {
+        isRotated ? (size.height, size.width) : size
+    }
 }
 
 enum Displays {
@@ -32,7 +44,8 @@ enum Displays {
                     vendorID: CGDisplayVendorNumber(id),
                     productID: CGDisplayModelNumber(id),
                     nativeWidth: native.width,
-                    nativeHeight: native.height
+                    nativeHeight: native.height,
+                    isRotated: Int(CGDisplayRotation(id)) % 180 == 90
                 )
             }
     }
@@ -46,10 +59,14 @@ enum Displays {
         CGDisplayCopyDisplayMode(id)
     }
 
-    /// HiDPI modes (rendered at 2x) larger than half the native width, best refresh rate per size, largest first.
+    /// HiDPI modes (rendered at 2x) larger than half the native size and in the screen's aspect ratio,
+    /// best refresh rate per size, largest first. macOS adds a few small HiDPI modes of its own, some in other
+    /// aspect ratios (600 × 800 on a 1080 × 1920 screen); those are left out.
     static func hiDPIModes(of display: ExternalDisplay) -> [CGDisplayMode] {
+        let aspect = Double(display.nativeWidth) / Double(display.nativeHeight)
         let candidates = modes(of: display.id).filter {
-            $0.pixelWidth == $0.width * 2 && $0.width * 2 > display.nativeWidth
+            $0.pixelWidth == $0.width * 2 && $0.width * 2 > display.nativeWidth && $0.height * 2 > display.nativeHeight
+                && abs(Double($0.width) / Double($0.height) - aspect) < 0.01
         }
         var best: [Int: CGDisplayMode] = [:]
         for mode in candidates {
